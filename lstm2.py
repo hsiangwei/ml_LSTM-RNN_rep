@@ -14,17 +14,22 @@ def load_data(filename, seq_len, normalise_window):
     f = open(filename, 'rb').read()
     data = f.decode().split('\n')
 
-    sequence_length = seq_len + 1
+    #定義一段time series長度
+    sequence_length = seq_len + 1 
     result = []
+    
+    #把原本只有一維的 time series 從t=0開始擴展成;t=0到t=seq_len為第一筆data, t=1到t=seq_len+1...以此類推
     for index in range(len(data) - sequence_length):
         result.append(data[index: index + sequence_length])
     
+    #每個 window 都對第一個點 normalize
     if normalise_window:
         result = normalise_windows(result)
 
     result = np.array(result)
 
-    row = round(0.9 * result.shape[0])
+    #切分 training set / testing set
+    row = round(0.7 * result.shape[0])
     train = result[:int(row), :]
     np.random.shuffle(train)
     x_train = train[:, :-1]
@@ -32,6 +37,7 @@ def load_data(filename, seq_len, normalise_window):
     x_test = result[int(row):, :-1]
     y_test = result[int(row):, -1]
 
+    #???
     x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))  
 
@@ -45,24 +51,28 @@ def normalise_windows(window_data):
     return normalised_data
 
 def build_model(layers):
+    #layer[0]是第一層input dim, [1]是第一層output dim, 
+    #[2]是第二層layer ....
     model = Sequential()
 
     model.add(LSTM(
         input_dim=layers[0],
         output_dim=layers[1],
-        return_sequences=True))
+        return_sequences=True)) #return_sequence?
     model.add(Dropout(0.2))
 
     model.add(LSTM(
         layers[2],
         return_sequences=False))
     model.add(Dropout(0.2))
-
+    
     model.add(Dense(
         output_dim=layers[3]))
     model.add(Activation("linear"))
 
     start = time.time()
+    
+    #model.compile
     model.compile(loss="mse", optimizer="rmsprop")
     print("> Compilation Time : ", time.time() - start)
     return model
